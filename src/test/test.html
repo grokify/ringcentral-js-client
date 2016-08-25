@@ -1,9 +1,11 @@
 <html>
+
 <head>
   <meta charset="utf-8">
   <title>Mocha Tests</title>
   <link href="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.css" rel="stylesheet" />
 </head>
+
 <body>
   <div id="mocha"></div>
 
@@ -12,6 +14,7 @@
   <script src="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.js"></script>
 
   <script>mocha.setup('bdd')</script>
+  <script src="../../build/service-test.js"></script>
   <script src="../../build/RingCentralClient.js"></script>
   <script src="../../build/tests.js"></script>
   <script>
@@ -19,4 +22,5 @@
     mocha.run();
   </script>
 </body>
+
 </html>

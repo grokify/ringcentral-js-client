@@ -5,11 +5,11 @@ export const SERVER_PRODUCTION = "https://platform.ringcentral.com";
 export const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
 
 const TOKEN_URL = "/restapi/oauth/token";
+const REVOKE_URL = "/restapi/oauth/revoke";
 
 export default class RingCentralService {
     server: string;
-    appKey: string;
-    appSecret: string;
+    clientBasicAuth: string; //Base64 of appKey:appSecret
 
     token: Token;
 
@@ -20,8 +20,7 @@ export default class RingCentralService {
         autoRefreshToken?: boolean;
     }) {
         this.server = opts.server;
-        this.appKey = opts.appKey;
-        this.appSecret = opts.appSecret;
+        this.clientBasicAuth = new Buffer(opts.appKey + ":" + opts.appSecret).toString("base64");
     }
 
     login(opts: { username: string; password: string; extension?: string }): Promise<void> {
@@ -36,15 +35,38 @@ export default class RingCentralService {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": "Basic " + new Buffer(this.appKey + ":" + this.appSecret).toString("base64")
+                "Authorization": "Basic " + this.clientBasicAuth
             }
         }).then(res => res.json()).then(json => {
             this.token = new Token(json);
         });
     }
 
-    logout() {
+    logout(): Promise<void> {
+        return fetch(this.server + REVOKE_URL, {
+            method: "POST",
+            body: querystring.stringify({ token: this.token.accessToken })
+        }).then(() => {
+            this.token = null;
+        });
+    }
 
+    refreshToken(): Promise<void> {
+        let body = {
+            refresh_token: this.token.refreshToken,
+            grant_type: "refresh_token",
+            endpoint_id: this.token.endpointId
+        };
+        return fetch(this.server + TOKEN_URL, {
+            method: "POST",
+            body: querystring.stringify(body),
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": "Basic " + this.clientBasicAuth
+            }
+        }).then(res => res.json()).then(json => {
+            this.token = new Token(json);
+        });
     }
 }
 
@@ -59,7 +81,7 @@ class Token {
         this.ownerId = data["owner_id"];
         this.endpointId = data["endpoint_id"];
     }
-    
+
     accessToken: string;
     type: string;
     expiresIn: number;  // The miliseconds of the date

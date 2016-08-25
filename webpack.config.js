@@ -24,17 +24,24 @@ module.exports = [{
         ]
     }
 }, {
-    entry: "./build/src/test/tests.js",
-    output: {
-        path: "./build",
-        filename: "tests.js"
-    },
-    externals: {
-        "../Client": "RingCentralClient",
-        "node-fetch": "fetch"
-    },
-    node: {
-        fs: "empty"
-    },
-    plugins: [new webpack.optimize.UglifyJsPlugin({})]
-}];
+        entry: "./build/src/test/tests.js",
+        output: {
+            path: "./build",
+            filename: "tests.js"
+        },
+        externals: {
+            "../Client": "RingCentralClient",
+            "node-fetch": "fetch"
+        },
+        node: {
+            fs: "empty"
+        },
+        plugins: [new webpack.optimize.UglifyJsPlugin({})]
+    }, {
+        entry: "./build/src/test/service.js",
+        output: {
+            path: "./build",
+            filename: "service-test.js"
+        },
+        plugins: [new webpack.optimize.UglifyJsPlugin({})]
+    }];
