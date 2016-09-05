@@ -86,3 +86,11 @@ describe("Fax", function () {
         return client.account().extension().fax().post({ to: [{ phoneNumber: "+16507411615" }] }, ["Text attentment for test", "Text paragraph attachments 2."]);
     });
 });
+
+describe("Call Log", () => {
+    it("Get call log", () => {
+        return client.account().extension().callLog().list({perPage: 2}).then(calls =>{
+            console.log(">>", calls.records);
+        });
+    });
+});
