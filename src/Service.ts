@@ -7,6 +7,9 @@ export const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
 const TOKEN_URL = "/restapi/oauth/token";
 const REVOKE_URL = "/restapi/oauth/revoke";
 
+/**
+ * A wrapper for sending http requests to RingCentralService.
+ */
 export default class RingCentralService {
     server: string;
     clientBasicAuth: string; //Base64 of appKey:appSecret
