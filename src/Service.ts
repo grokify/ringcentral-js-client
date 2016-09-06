@@ -85,6 +85,10 @@ export default class Service {
     logout(): Promise<void> {
         return fetch(this.server + REVOKE_URL, {
             method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+                "Authorization": "Basic " + this.clientBasicAuth
+            },
             body: querystring.stringify({ token: this.token.accessToken })
         }).then(() => {
             this.token = null;
