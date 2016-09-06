@@ -13,7 +13,7 @@ before(function () {
 });
 
 after(() => {
-    return client._service.logout();
+    return client.service.logout();
 });
 
 describe("Account", function () {
@@ -89,8 +89,6 @@ describe("Fax", function () {
 
 describe("Call Log", () => {
     it("Get call log", () => {
-        return client.account().extension().callLog().list({perPage: 2}).then(calls =>{
-            console.log(">>", calls.records);
-        });
+        return client.account().extension().callLog().list({ perPage: 2 });
     });
 });

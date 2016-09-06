@@ -36,7 +36,7 @@ export default class {{name}} extends UrlSection {
     */
     get(): Promise<{{modelType}}> {
         return this.getService().get(this.getEndpoint()).then(function (res) {
-            return res.{{#if getReturnBinary}}response{{else}}json{{/if}}();
+            return {{#if getReturnBinary}}res{{else}}res.json(){{/if}};
         });
     }
     {{/if}}
@@ -102,7 +102,7 @@ export default class {{name}} extends UrlSection {
     */
     delete(
     query?: {{deleteMethod.queryParams}}): Promise<void> {
-        return this.getService().delete(this.getEndpoint(), query);
+        return this.getService().delete(this.getEndpoint(), query).then(()=>{});
     }
     {{/if}}
 }

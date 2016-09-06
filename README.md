@@ -10,86 +10,111 @@ This is a library implemented in typescript which provides convenient apis for t
 
 ```shell
 npm install https://github.com/zengfenfei/ringcentral-js-client#releases --save # This version is for test only which will change soon.
-npm install ringcentral
 ```
+
+### Prerequisites
+To perform subsequent operations, you need a ringcentral developer account(apply at https://developer.ringcentral.com/) and a ringcentral account. 
 
 ### Used in Typescript or ES6
 ```typescript
-import RingCentralClient from "ringcentral-client";
-import * as RingCentral from "ringcentral";
+import RingCentralClient, {SERVER_SANDBOX} from "ringcentral-client";
 
-var RcSdk = new RingCentral({
-	"server": "https://platform.devtest.ringcentral.com",
-	"appKey": "{yourAppKey}",
-	"appSecret": "{yourAppSecret}"
-}); // Create your RingCentral JS sdk instance and login
+let client = new RingCentralClient({
+	server: SERVER_SANDBOX, // Optional, default is production server
+	appKey: "{yourAppKey}",
+	appSecret: "{yourAppSecret}"
+});
 
-RcSdk.platform().login({
+// Log into RingCentral
+client.login({
 	"username": "{username}",
-	"extension": "",
+	"extension": "{extension}",
 	"password": "{password}"
-}).then(function() {
-
-	var client = new RingCentralClient(RcSdk);
-	client.account().get().then(function(accountInfo) {
-		console.log(accountInfo)
-	});
-
+}).then(() => {
+	console.log("Login success");
+	return client.account().get(); // Call RingCentral REST API
+}).then((accountInfo) => {
+	console.log("Current account info", accountInfo);
+	return client.logout();	// Logout
+}).then(() => {
+	console.log("logout success");
+}).catch(e => {
+	console.error("Error occured", e);
 });
 ```
 
 ### Used in commonjs(node.js, webpack and browserify)
 ```javascript
-var RingCentralClient = require("ringcentral-client").default; // Don't forget the `default`
-var RingCentral = require("ringcentral");
+var ringcentral = require("ringcentral-client");
+var RingCentralClient = ringcentral.Client;
 
-var RcSdk = new RingCentral({
-	"server": "https://platform.devtest.ringcentral.com",
-	"appKey": "{yourAppKey}",
-	"appSecret": "{yourAppSecret}"
-}); // Create your RingCentral JS sdk instance and login
+let client = new RingCentralClient({
+	server: ringcentral.SERVER_SANDBOX, // Optional, default is production server
+	appKey: "{yourAppKey}",
+	appSecret: "{yourAppSecret}"
+});
 
-RcSdk.platform().login({
+// Log into RingCentral
+client.login({
 	"username": "{username}",
-	"extension": "",
+	"extension": "{extension}",
 	"password": "{password}"
-}).then(function() {
-
-	var client = new RingCentralClient(RcSdk);
-	client.account().get().then(function(accountInfo) {
-		console.log(accountInfo)
-	});
-
+}).then(() => {
+	console.log("Login success");
+	return client.account().get(); // Call RingCentral REST API
+}).then((accountInfo) => {
+	console.log("Current account info", accountInfo);
+	return client.logout();	// Logout
+}).then(() => {
+	console.log("logout success");
+}).catch(e => {
+	console.error("Error occured", e);
 });
 ```
 
 ### Used in browser as a bundled javascript library 
-Add the following `script` tags to your html:
+
+All APIs are exposed on the global variable `ringcentral`.
 ```html
-<script src="path/to/node_modules/ringcentral/build/ringcentral.min.js"></script>
-<script src="path/to/node_modules/ringcentral-client/build/RingCentralClient.js"></script>
-```
+<!DOCTYPE html>
+<html>
 
-Then you can use the two exposed global variable `RingCentralClient` and `RingCentral`.
-```javascript
-var RcSdk = new RingCentral.SDK({
-	"server": "https://platform.devtest.ringcentral.com",
-	"appKey": "{yourAppKey}",
-	"appSecret": "{yourAppSecret}"
-}); // Create your RingCentral JS sdk instance and login
+<head>
+	<title>Using RingCentralClient in browser as bundle.</title>
+</head>
 
-RcSdk.platform().login({
-	"username": "{username}",
-	"extension": "",
-	"password": "{password}"
-}).then(function() {
+<body>
+	<!-- Include the bundled version of RingCentralClient -->
+	<script type="text/javascript" src="node_modules/ringcentral-client/build/ringcentral-client.js"></script>
+	<script type="text/javascript">
+console.log("All api", ringcentral);
 
-	var client = new RingCentralClient(RcSdk);
-	client.account().get().then(function(accountInfo) {
-		console.log(accountInfo)
-	});
-
+let client = new ringcentral.Client({
+	server: ringcentral.SERVER_SANDBOX, // Optional, default is production server
+	appKey: "{yourAppKey}",
+	appSecret: "{yourAppSecret}"
 });
+
+// Log into RingCentral
+client.login({
+	"username": "{username}",
+	"extension": "{extension}",
+	"password": "{password}"
+}).then(() => {
+	console.log("Login success");
+	return client.account().get(); // Call RingCentral REST API
+}).then((accountInfo) => {
+	console.log("Current account info", accountInfo);
+	return client.logout();	// Logout
+}).then(() => {
+	console.log("logout success");
+}).catch(e => {
+	console.error("Error occured", e);
+});
+</script>
+</body>
+
+</html>
 ```
 
 ## Examples

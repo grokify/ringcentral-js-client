@@ -1,3 +1,5 @@
+import Service from "./Service";
+
 /**
  * UrlParts
  */
@@ -5,8 +7,8 @@ export default class UrlSection {
     private name: string;
     private value: string;
     private previous: UrlSection;
-    private _service: any;
-    constructor(name: string, value?: string,  prv?: UrlSection, service?) {
+    private _service: Service;
+    constructor(name: string, value?: string,  prv?: UrlSection, service?: Service) {
         this._service = service;
         this.name = name;
         this.value = value || null;

@@ -4,26 +4,63 @@ import * as querystring from "querystring";
 export const SERVER_PRODUCTION = "https://platform.ringcentral.com";
 export const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
 
+export const SERVER_VERSION = "v1.0";
+
 const TOKEN_URL = "/restapi/oauth/token";
 const REVOKE_URL = "/restapi/oauth/revoke";
 
 /**
  * A wrapper for sending http requests to RingCentralService.
  */
-export default class RingCentralService {
+export default class Service {
     server: string;
     clientBasicAuth: string; //Base64 of appKey:appSecret
 
     token: Token;
 
     constructor(opts: {
-        server: string;
+        server?: string;
         appKey: string;
         appSecret: string;
-        autoRefreshToken?: boolean;
     }) {
-        this.server = opts.server;
+        this.server = opts.server || SERVER_PRODUCTION;
         this.clientBasicAuth = new Buffer(opts.appKey + ":" + opts.appSecret).toString("base64");
+    }
+
+    /**
+     * Sent GET http method
+     */
+    get(url: string, query?: {}): Promise<Response> {
+        return this.send(url, query);
+    }
+
+    delete(url: string, query?: {}): Promise<Response> {
+        if (query) {
+            url += "?" + querystring.stringify(query)
+        }
+        return this.send(url, query, {
+            method: "DELETE"
+        });
+    }
+
+    post(url: string, body: {}, query?: {}): Promise<Response> {
+        let a;
+        return a;
+    }
+
+    put(url: string, body: {}, query?: {}): Promise<Response> {
+        let a;
+        return a;
+    }
+
+    /**
+     * Perform an authenticated API call.
+     */
+    send(endpoint: string, query?: {}, opts?: RequestInit): Promise<Response> {
+        opts = opts || {};
+        opts.headers = opts.headers || {};
+        opts.headers["Authorization"] = this.token.type + " " + this.token.accessToken;
+        return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + querystring.stringify(query), opts);
     }
 
     login(opts: { username: string; password: string; extension?: string }): Promise<void> {
