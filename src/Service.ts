@@ -1,5 +1,6 @@
 import * as fetch from "isomorphic-fetch";
 import * as querystring from "querystring";
+import {name as packageName, version as packageVersion} from "./generated/package";
 
 export const SERVER_PRODUCTION = "https://platform.ringcentral.com";
 export const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
@@ -14,17 +15,26 @@ const REVOKE_URL = "/restapi/oauth/revoke";
  */
 export default class Service {
     server: string;
-    clientBasicAuth: string; //Base64 of appKey:appSecret
+    appKey: string;
+    appSecret: string;
 
     token: Token;
+    autoRefreshToken: boolean;
 
     constructor(opts: {
         server?: string;
         appKey: string;
         appSecret: string;
+        autoRefreshToken?: boolean;
     }) {
         this.server = opts.server || SERVER_PRODUCTION;
-        this.clientBasicAuth = new Buffer(opts.appKey + ":" + opts.appSecret).toString("base64");
+        this.appKey = opts.appKey;
+        this.appSecret = opts.appSecret;
+        this.autoRefreshToken = opts.autoRefreshToken === false ? false : true;
+    }
+
+    basicAuth(): string {
+        return new Buffer(this.appKey + ":" + this.appSecret).toString("base64");
     }
 
     /**
@@ -60,22 +70,27 @@ export default class Service {
         opts = opts || {};
         opts.headers = opts.headers || {};
         opts.headers["Authorization"] = this.token.type + " " + this.token.accessToken;
+        opts.headers["Client-Id"] = this.appKey;
+        opts.headers["X-User-Agent"] = packageName + "/" + packageVersion;
         return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + querystring.stringify(query), opts);
     }
 
-    login(opts: { username: string; password: string; extension?: string }): Promise<void> {
+    login(opts: { username: string; password: string; extension?: string, accessTokenTtl?: number, refreshTokenTtl?: number, scope?: string[] }): Promise<void> {
         let body = {
             grant_type: "password",
             username: opts.username,
             extension: opts.extension,
-            password: opts.password
+            password: opts.password,
+            access_token_ttl: opts.accessTokenTtl,
+            refresh_token_ttl: opts.refreshTokenTtl,
+            scope: opts.scope && opts.scope.join(",")
         };
         return fetch(this.server + TOKEN_URL, {
             body: querystring.stringify(body),
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": "Basic " + this.clientBasicAuth
+                "Authorization": "Basic " + this.basicAuth()
             }
         }).then(res => res.json()).then(json => {
             this.token = new Token(json);
@@ -87,7 +102,7 @@ export default class Service {
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": "Basic " + this.clientBasicAuth
+                "Authorization": "Basic " + this.basicAuth()
             },
             body: querystring.stringify({ token: this.token.accessToken })
         }).then(() => {
@@ -106,7 +121,7 @@ export default class Service {
             body: querystring.stringify(body),
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
-                "Authorization": "Basic " + this.clientBasicAuth
+                "Authorization": "Basic " + this.basicAuth()
             }
         }).then(res => res.json()).then(json => {
             this.token = new Token(json);

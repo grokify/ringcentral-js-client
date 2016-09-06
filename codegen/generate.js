@@ -6,6 +6,7 @@ var handlebars = require('handlebars');
 var genUrlBuilders = require('./gen-url-builders.js');
 var genOperations = require('./gen-operations.js');
 var genModel = require('./gen-model-class.js');
+var genPackageInfo = require('./gen-package-info.js');
 var config = require('./config.json');
 
 var args = parseArgs(process.argv.slice(2));
@@ -25,6 +26,9 @@ genModels(swagger.definitions, modelTpl);
 var tplFile = __dirname + '/templates/UrlSection.ts.tpl';
 var tpl = handlebars.compile('' + fs.readFileSync(tplFile));
 genUrlBuildersWithOperationApi(swagger, tpl);
+
+var code = genPackageInfo(['name', 'version']);
+fs.writeFileSync(outDir + "/package.ts", code);
 
 console.log(chalk.green('===All generated==='));
 

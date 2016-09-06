@@ -1,3 +1,3 @@
 export default {
-    authDataUrl: "http://localhost/data/rc-auth.json"
+    authDataUrl: "/data/rc-auth.json"
 };
