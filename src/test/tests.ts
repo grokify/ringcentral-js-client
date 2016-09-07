@@ -2,6 +2,7 @@ import auth from "./auth";
 import Client from "../Client";
 import {expect} from "chai";
 import * as fs from "fs";
+import "../service-test";
 
 let client: Client;
 
@@ -10,10 +11,6 @@ before(function () {
     return auth.then(function (rc) {
         client = new Client(rc);
     });
-});
-
-after(() => {
-    return client.service.logout();
 });
 
 describe("Account", function () {

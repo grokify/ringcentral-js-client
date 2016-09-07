@@ -32,6 +32,19 @@ describe("Auth", () => {
         });
     });
 
+    it("Login will try to use cached token", () => {
+        let cachedAccessToken;
+        return service.login(authConfig.user).then(() => {
+            cachedAccessToken = service.token.accessToken;
+            service.token = null;
+            return service.login(authConfig.user);
+        }).then(() => {
+            if (cachedAccessToken != service.token.accessToken) {
+                throw "Access token not cached.";
+            }
+        });
+    });
+
     it("Allow only one refresh token request at the same time", () => {
         return service.login(authConfig.user).then(() => {
             let p1 = service.refreshToken();
@@ -46,7 +59,7 @@ describe("Auth", () => {
         return service.refreshToken();
     });
 
-    it("Logout", () => {
+    it("Access token and refresh token should be invalid after logout", () => {
         return service.logout();
     });
 });

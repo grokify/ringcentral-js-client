@@ -1,6 +1,7 @@
 import * as fetch from "isomorphic-fetch";
 import * as querystring from "querystring";
 import {name as packageName, version as packageVersion} from "./generated/package";
+import Token, {TokenCache, MemoryCache} from "./Token";
 
 export const SERVER_PRODUCTION = "https://platform.ringcentral.com";
 export const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
@@ -19,16 +20,25 @@ export default class Service {
     appSecret: string;
 
     token: Token;
+    tokenCache: TokenCache;
+    tokenCacheKey: string;
     refreshTokenPromise: Promise<void>;
 
     constructor(opts: {
         server?: string;
         appKey: string;
         appSecret: string;
+        tokenCache?: TokenCache;
     }) {
         this.server = opts.server || SERVER_PRODUCTION;
         this.appKey = opts.appKey;
         this.appSecret = opts.appSecret;
+        
+        let cache = opts.tokenCache;
+        if (!cache && typeof localStorage != "undefined") {
+            cache = localStorage;
+        }
+        this.tokenCache = cache || new MemoryCache();
     }
 
     basicAuth(): string {
@@ -81,7 +91,15 @@ export default class Service {
         return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + querystring.stringify(query), opts);
     }
 
-    login(opts: { username: string; password: string; extension?: string, accessTokenTtl?: number, refreshTokenTtl?: number, scope?: string[] }): Promise<Token> {
+    login(opts: { username: string; password: string; extension?: string, accessTokenTtl?: number, refreshTokenTtl?: number, scope?: string[] }): Promise<void> {
+        this.tokenCacheKey = [packageName + "/" + packageVersion, opts.username, opts.extension, ].join("$");
+        let tokenData = this.tokenCache.getItem(this.tokenCacheKey);
+        if (tokenData) {
+            this.token = new Token(JSON.parse(tokenData));
+            if (!this.token.expired()) {
+                return Promise.resolve(null);
+            }
+        }
         let body = {
             grant_type: "password",
             username: opts.username,
@@ -104,11 +122,14 @@ export default class Service {
                 throw json;
             }
             this.token = new Token(json, Date.now() - startTime);
-            return this.token;
+            this.tokenCache.setItem(this.tokenCacheKey, JSON.stringify(this.token));
         });
     }
 
     logout(): Promise<void> {
+        if (!this.token) {
+            return Promise.resolve(null);
+        }
         return fetch(this.server + REVOKE_URL, {
             method: "POST",
             headers: {
@@ -118,6 +139,7 @@ export default class Service {
             body: querystring.stringify({ token: this.token.accessToken })
         }).then(() => {
             this.token = null;
+            this.tokenCache.setItem(this.tokenCacheKey, "");
         });
     }
 
@@ -153,36 +175,5 @@ export default class Service {
             throw e;
         });
         return this.refreshTokenPromise;
-    }
-}
-
-export class Token {
-    /** timeSpent: Time in ms spent fetching token. */
-    constructor(data, timeSpent: number) {
-        this.accessToken = data["access_token"];
-        this.type = data["token_type"];
-        this.expiresIn = Date.now() + data["expires_in"] * 1000 - timeSpent;
-        this.refreshToken = data["refresh_token"];
-        this.refreshTokenExpiresIn = Date.now() + data["refresh_token_expires_in"] * 1000 - timeSpent;
-        this.scope = data["scope"].split(" ");
-        this.ownerId = data["owner_id"];
-        this.endpointId = data["endpoint_id"];
-    }
-
-    accessToken: string;
-    type: string;
-    expiresIn: number;  // Date time
-    refreshToken: string;
-    refreshTokenExpiresIn: number;  // Date time
-    scope: string[];    // Permissions
-    ownerId: string;
-    endpointId: string;
-
-    expired(): boolean {
-        return Date.now() >= this.expiresIn;
-    }
-
-    refreshTokenExpired(): boolean {
-        return Date.now() >= this.refreshTokenExpiresIn;
     }
 }

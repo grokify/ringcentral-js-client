@@ -156,3 +156,6 @@ client.account().extension().sms().post({ to: [{ phoneNumber: "911" }], text: "S
     console.error("Fail to send sms", e);
 });
 ```
+
+## Token cache
+Token will be cached in `localStorage` when used in browser. Login will use cached token if valid, perform api calls will try cached token if token in memory expires.
