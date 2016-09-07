@@ -19,6 +19,7 @@ export default class Service {
     appSecret: string;
 
     token: Token;
+    refreshTokenPromise: Promise<void>;
 
     constructor(opts: {
         server?: string;
@@ -120,10 +121,13 @@ export default class Service {
         });
     }
 
-    /** TODO Cache the Promise */
+    /** Only one request will be sent at the same time. */
     refreshToken(): Promise<void> {
         if (!this.token) {
             return Promise.reject(new Error("Not authorized."));
+        }
+        if (this.refreshTokenPromise) {
+            return this.refreshTokenPromise;
         }
         if (this.token.refreshTokenExpired()) {
             return Promise.reject(new Error("Refresh token has expired."));
@@ -134,7 +138,7 @@ export default class Service {
             endpoint_id: this.token.endpointId
         };
         let startTime = Date.now();
-        return fetch(this.server + TOKEN_URL, {
+        this.refreshTokenPromise = fetch(this.server + TOKEN_URL, {
             method: "POST",
             body: querystring.stringify(body),
             headers: {
@@ -142,8 +146,13 @@ export default class Service {
                 "Authorization": "Basic " + this.basicAuth()
             }
         }).then(res => res.json()).then(json => {
+            this.refreshTokenPromise = null;
             this.token = new Token(json, Date.now() - startTime);
+        }).catch(e => {
+            this.refreshTokenPromise = null;
+            throw e;
         });
+        return this.refreshTokenPromise;
     }
 }
 
