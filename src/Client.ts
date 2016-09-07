@@ -1,23 +1,33 @@
-import Service, {SERVER_PRODUCTION, SERVER_SANDBOX, SERVER_VERSION} from "./Service";
+import Service, {Token, SERVER_PRODUCTION, SERVER_SANDBOX, SERVER_VERSION} from "./Service";
 import Account from "./generated/url-builders/Account";
 import ClientInfo from "./generated/url-builders/ClientInfo";
 import NumberPool from "./generated/url-builders/NumberPool";
 
 export default class Client {
     service: Service;
-    autoRefreshToken: boolean;  // Default is true
 
     constructor(opts: {
         server: string;
         appKey: string;
         appSecret: string;
-        autoRefreshToken?: boolean;
     }) {
         this.service = new Service(opts);
-        this.autoRefreshToken = opts.autoRefreshToken === false ? false : true;
     }
 
-    login(opts: { username: string; password: string; extension?: string }): Promise<void> {
+    /** Ttl: time to live in seconds. */
+    login(opts: {
+        /** Phone number linked to account or extension in account in E.164 format with or without leading "+" sign */
+        username: string;
+        password: string;
+        /** Extension short number. If company number is specified as a username, and extension is not specified, the server will attempt to authenticate client as main company administrator */
+        extension?: string;
+        /** Access token lifetime in seconds; the possible values are from 600 sec (10 min) to 3600 sec (1 hour). The default value is 3600 sec. If the value specified exceeds the default one, the default value is set. If the value specified is less than 600 seconds, the minimum value (600 sec) is set */
+        accessTokenTtl?: number;
+        /** Refresh token lifetime in seconds. The default value depends on the client application, but as usual it equals to 7 days. If the value specified exceeds the default one, the default value is applied. If client specifies refresh_token_ttl<=0, refresh token is not returned even if the corresponding grant type is supported */
+        refreshTokenTtl?: number;
+        /** List of API permissions to be used with access token (see [Application Permissions](https://developer.ringcentral.com/api-docs/latest/APIPermissions.html)). Can be omitted when requesting all permissions defined during the application registration phase */
+        scope?: string[]
+    }): Promise<Token> {
         return this.service.login(opts);
     }
 
