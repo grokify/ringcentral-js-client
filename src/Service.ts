@@ -3,10 +3,10 @@ import * as querystring from "querystring";
 import {name as packageName, version as packageVersion} from "./generated/package";
 import Token, {TokenStore, DefaultTokenStore} from "./Token";
 
-export const SERVER_PRODUCTION = "https://platform.ringcentral.com";
-export const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
+const SERVER_PRODUCTION = "https://platform.ringcentral.com";
+const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
 
-export const SERVER_VERSION = "v1.0";
+const SERVER_VERSION = "v1.0";
 
 const TOKEN_URL = "/restapi/oauth/token";
 const REVOKE_URL = "/restapi/oauth/revoke";
@@ -20,14 +20,9 @@ export default class Service {
     appSecret: string;
 
     tokenStore: TokenStore;
-    ongoingTokenRefresh: Promise<void>;
+    private ongoingTokenRefresh: Promise<void>;
 
-    constructor(opts: {
-        server?: string;
-        appKey: string;
-        appSecret: string;
-        tokenStore?: TokenStore;
-    }) {
+    constructor(opts: ServiceOptions) {
         this.server = opts.server || SERVER_PRODUCTION;
         this.appKey = opts.appKey;
         this.appSecret = opts.appSecret;
@@ -178,4 +173,19 @@ export default class Service {
         return this.ongoingTokenRefresh;
     }
 
+}
+
+interface ServiceOptions {
+    server?: string;
+    appKey: string;
+    appSecret: string;
+    /** By default, token is stored in localStorage in browser and memory in node. */
+    tokenStore?: TokenStore;    
+}
+
+export {
+SERVER_PRODUCTION,
+SERVER_SANDBOX,
+SERVER_VERSION,
+ServiceOptions
 }

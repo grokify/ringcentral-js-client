@@ -1,4 +1,4 @@
-import Service, { SERVER_PRODUCTION, SERVER_SANDBOX, SERVER_VERSION} from "./Service";
+import Service, { SERVER_PRODUCTION, SERVER_SANDBOX, SERVER_VERSION, ServiceOptions} from "./Service";
 import {MemoryTokenStore} from "./Token";
 import Account from "./generated/url-builders/Account";
 import ClientInfo from "./generated/url-builders/ClientInfo";
@@ -7,11 +7,7 @@ import NumberPool from "./generated/url-builders/NumberPool";
 export default class Client {
     service: Service;
 
-    constructor(opts: {
-        server: string;
-        appKey: string;
-        appSecret: string;
-    }) {
+    constructor(opts: ServiceOptions) {
         this.service = new Service(opts);
     }
 
