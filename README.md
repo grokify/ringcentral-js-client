@@ -15,7 +15,8 @@ npm install https://github.com/zengfenfei/ringcentral-js-client#releases --save 
 ### Prerequisites
 To perform subsequent operations, you need a ringcentral developer account(apply at https://developer.ringcentral.com/) and a ringcentral account. 
 
-### Used in Typescript or ES6
+### Used in Typescript or ES6 (Recommended)
+
 ```typescript
 import RingCentralClient, {SERVER_SANDBOX} from "ringcentral-client";
 
@@ -59,15 +60,15 @@ client.login({
 	"username": "{username}",
 	"extension": "{extension}",
 	"password": "{password}"
-}).then(() => {
+}).then( function() {
 	console.log("Login success");
 	return client.account().get(); // Call RingCentral REST API
-}).then((accountInfo) => {
+}).then( function(accountInfo) {
 	console.log("Current account info", accountInfo);
 	return client.logout();	// Logout
-}).then(() => {
+}).then( function() {
 	console.log("logout success");
-}).catch(e => {
+}).catch( function(e) {
 	console.error("Error occured", e);
 });
 ```
@@ -100,15 +101,15 @@ client.login({
 	"username": "{username}",
 	"extension": "{extension}",
 	"password": "{password}"
-}).then(() => {
+}).then( function() {
 	console.log("Login success");
 	return client.account().get(); // Call RingCentral REST API
-}).then((accountInfo) => {
+}).then( function(accountInfo) {
 	console.log("Current account info", accountInfo);
 	return client.logout();	// Logout
-}).then(() => {
+}).then( function() {
 	console.log("logout success");
-}).catch(e => {
+}).catch( function(e) {
 	console.error("Error occured", e);
 });
 </script>
@@ -157,5 +158,13 @@ client.account().extension().sms().post({ to: [{ phoneNumber: "911" }], text: "S
 });
 ```
 
-## Token cache
-Token will be cached in `localStorage` when used in browser. Login will use cached token if valid, perform api calls will try cached token if token in memory expires.
+## Token Management
+Token is be stored in `TokenStore`, and it is always fetched from `TokenStore` every time needed. By default, token is stored in localStorage in browser and memory in node. You can override this by the `tokenStore` of the `Client` options:
+```typescript
+import RingCentralClient, {MemoryTokenStore} from "ringcentral-client";
+
+let client = new RingCentralClient({
+	tokenStore: new MemoryTokenStore("key"),   // Always use memory token store. You can also create your own TokenStore. 
+	...
+});
+```
