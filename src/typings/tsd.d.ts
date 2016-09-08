@@ -3,3 +3,5 @@
 /// <reference path="modules/form-data/index.d.ts" />
 /// <reference path="ringcentral/ringcentral.d.ts" />
 /// <reference path="globals/isomorphic-fetch/index.d.ts" />
+/// <reference path="is-plain-object/is-plain-object.d.ts" />
+

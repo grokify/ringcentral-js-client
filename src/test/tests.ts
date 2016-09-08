@@ -1,15 +1,19 @@
-import auth from "./auth";
+import * as fetch from "isomorphic-fetch";
+import testConfig from "./config";
 import Client from "../Client";
 import {expect} from "chai";
 import * as fs from "fs";
 import "../service-test";
 
+let config: any;
 let client: Client;
 
 before(function () {
     // runs before all tests in this block
-    return auth.then(function (rc) {
-        client = new Client(rc);
+    return fetch(testConfig.authDataUrl).then(res => res.json()).then(conf => {
+        config = conf;
+        client = new Client(config.app);
+        return client.login(config.user);
     });
 });
 
@@ -64,7 +68,7 @@ describe("Binary response", function () {
 
 });
 
-let imgPath = "/Users/kevin.zeng/Desktop/profile.png";
+let imgPath = __dirname + "/res/banner_index_logged.png";
 describe("Binary request", function () {
     if (!fs.createReadStream) {
         return;
@@ -79,8 +83,14 @@ describe("Binary request", function () {
 });
 
 describe("Fax", function () {
-    it("Send fax", function () {
-        return client.account().extension().fax().post({ to: [{ phoneNumber: "+16507411615" }] }, ["Text attentment for test", "Text paragraph attachments 2."]);
+    it("Send fax, post form data", function () {
+        let attachments;
+        if (fs.createReadStream) {
+            attachments = ["Text attentment for test. Followed by a png picture.", fs.createReadStream(imgPath)];
+        } else {
+            attachments = ["Test fax test sent from browser, " + navigator.userAgent];
+        }
+        return client.account().extension().fax().post({ to: [{ phoneNumber: "+16507411615" }] }, attachments);
     });
 });
 

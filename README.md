@@ -158,6 +158,21 @@ client.account().extension().sms().post({ to: [{ phoneNumber: "911" }], text: "S
 });
 ```
 
+### Send fax
+
+For all supported options and mediatype, please refer to https://developer.ringcentral.com/api-docs/latest/index.html#!#RefFaxMessages.html.
+```typescript
+import * as fs from "fs";
+client.account().extension().fax().post({
+            to: [{ phoneNumber: "{receiverPhoneNumber}" }],
+            faxResolution: 'High'
+        }, [    // Second argument is an array of attachments, attachment can be string, Blob, node readable stream.
+                "{Message text}",
+                fs.createReadStream("{filePath}")
+            ]);
+    });
+```
+
 ## Token Management
 Token is be stored in `TokenStore`, and it is always fetched from `TokenStore` every time needed. By default, token is stored in localStorage in browser and memory in node. You can override this by the `tokenStore` of the `Client` options:
 ```typescript

@@ -1,5 +1,6 @@
 import * as fetch from "isomorphic-fetch";
 import * as querystring from "querystring";
+import * as isPlainObject from "is-plain-object";
 import {name as packageName, version as packageVersion} from "./generated/package";
 import Token, {TokenStore, DefaultTokenStore} from "./Token";
 
@@ -49,9 +50,11 @@ export default class Service {
         });
     }
 
-    post(url: string, body: {}, query?: {}): Promise<Response> {
-        let a;
-        return a;
+    post(url: string, body: any, query?: {}): Promise<Response> {
+        if (isPlainObject(body)) {
+            body = JSON.stringify(body);
+        }
+        return this.send(url, query, {method: "POST", body: body});
     }
 
     put(url: string, body: {}, query?: {}): Promise<Response> {
