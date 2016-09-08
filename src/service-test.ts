@@ -57,6 +57,31 @@ describe("Auth", () => {
         });
     });
 
+    let NotLoginError = "NotLogin";
+    it("Call api before login", () => {
+        return service.logout().then(()=>{
+            return service.get("/some-api");
+        }).then(() => {
+            throw new Error("Should not success.");
+        }, e => {
+            if (e.name != NotLoginError) {
+                throw new Error("Wrong error code.");
+            }
+        });
+    });
+
+    it("Refresh token before login", () => {
+        return service.logout().then(()=>{
+            return service.refreshToken();
+        }).then(() => {
+            throw new Error("Should not success.");
+        }, e => {
+            if (e.name != NotLoginError) {
+                throw new Error("Wrong error code.");
+            }
+        });
+    });
+
     it("Logout expired accessToken.");
 
     it("Refresh Token", () => {

@@ -68,7 +68,9 @@ export default class Service {
     send(endpoint: string, query?: {}, opts?: RequestInit): Promise<Response> {
         let tokenData = this.tokenStore.get();
         if (!tokenData) {
-            return Promise.reject(new Error("No access token, can not perform api calls"));
+            let e = new Error("Cannot perform api calls without login.");
+            e.name = "NotLogin";
+            return Promise.reject(e);
         }
         let token = tokenData.token;
         if (token.expired()) {
@@ -143,7 +145,9 @@ export default class Service {
     refreshToken(): Promise<void> {
         let tokenData = this.tokenStore.get();
         if (!tokenData) {
-            return Promise.reject(new Error("No access token, can not refresh token."));
+            let e = new Error("Cannot refresh token without login.");
+            e.name = "NotLogin";
+            return Promise.reject(e);
         }
         if (this.ongoingTokenRefresh) {
             return this.ongoingTokenRefresh;
