@@ -26,7 +26,8 @@ describe("Auth", () => {
 
     it("Login with right credential", () => {
         return service.login(authConfig.user).then(() => {
-            if (service.token.expired() || service.token.refreshTokenExpired()) {
+            let token = service.tokenStore.get().token;
+            if (token.expired() || token.refreshTokenExpired()) {
                 throw "Token not valid";
             }
         });
@@ -34,13 +35,14 @@ describe("Auth", () => {
 
     it("Login will try to use cached token", () => {
         let cachedAccessToken;
+        let service2 = new Service(authConfig.app);
         return service.login(authConfig.user).then(() => {
-            cachedAccessToken = service.token.accessToken;
-            service.token = null;
-            return service.login(authConfig.user);
+            cachedAccessToken = service.tokenStore.get().token.accessToken;
+            return service2.login(authConfig.user);
         }).then(() => {
-            if (cachedAccessToken != service.token.accessToken) {
-                throw "Access token not cached.";
+            let cur = service2.tokenStore.get().token.accessToken;
+            if (cachedAccessToken != cur) {
+                throw "Access token not the same." + cachedAccessToken + " : " + cur;
             }
         });
     });
@@ -55,9 +57,13 @@ describe("Auth", () => {
         });
     });
 
+    it("Logout expired accessToken.");
+
     it("Refresh Token", () => {
         return service.refreshToken();
     });
+
+    it("Refresh token with wrong info");
 
     it("Access token and refresh token should be invalid after logout", () => {
         return service.logout();

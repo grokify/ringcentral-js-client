@@ -1,7 +1,7 @@
 import * as fetch from "isomorphic-fetch";
 import * as querystring from "querystring";
 import {name as packageName, version as packageVersion} from "./generated/package";
-import Token, {TokenCache, MemoryCache} from "./Token";
+import Token, {TokenStore, DefaultTokenStore} from "./Token";
 
 export const SERVER_PRODUCTION = "https://platform.ringcentral.com";
 export const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
@@ -19,29 +19,22 @@ export default class Service {
     appKey: string;
     appSecret: string;
 
-    token: Token;
-    tokenCache: TokenCache;
-    tokenCacheKey: string;
-    refreshTokenPromise: Promise<void>;
+    tokenStore: TokenStore;
+    ongoingTokenRefresh: Promise<void>;
 
     constructor(opts: {
         server?: string;
         appKey: string;
         appSecret: string;
-        tokenCache?: TokenCache;
+        tokenStore?: TokenStore;
     }) {
         this.server = opts.server || SERVER_PRODUCTION;
         this.appKey = opts.appKey;
         this.appSecret = opts.appSecret;
-        
-        let cache = opts.tokenCache;
-        if (!cache && typeof localStorage != "undefined") {
-            cache = localStorage;
-        }
-        this.tokenCache = cache || new MemoryCache();
+        this.tokenStore = opts.tokenStore || new DefaultTokenStore(packageName + "/" + packageVersion + "$TokenStore$" + opts.appKey);
     }
 
-    basicAuth(): string {
+    private basicAuth(): string {
         return new Buffer(this.appKey + ":" + this.appSecret).toString("base64");
     }
 
@@ -75,30 +68,32 @@ export default class Service {
      * Perform an authenticated API call.
      */
     send(endpoint: string, query?: {}, opts?: RequestInit): Promise<Response> {
-        if (!this.token) {
-            return Promise.reject(new Error("Not login, can not perform api calls"));
+        let tokenData = this.tokenStore.get();
+        if (!tokenData) {
+            return Promise.reject(new Error("No access token, can not perform api calls"));
         }
-        if (this.token.expired()) {
-            return this.refreshToken().then(() => {
-                return this.send(endpoint, query, opts);
-            });
+        let token = tokenData.token;
+        if (token.expired()) {
+            if (token.refreshTokenExpired()) {
+                return Promise.reject("Token has expired.");
+            } else {
+                return this.refreshToken().then(() => {
+                    return this.send(endpoint, query, opts);
+                });
+            }
         }
         opts = opts || {};
         opts.headers = opts.headers || {};
-        opts.headers["Authorization"] = this.token.type + " " + this.token.accessToken;
+        opts.headers["Authorization"] = token.type + " " + token.accessToken;
         opts.headers["Client-Id"] = this.appKey;
         opts.headers["X-User-Agent"] = packageName + "/" + packageVersion;
         return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + querystring.stringify(query), opts);
     }
 
     login(opts: { username: string; password: string; extension?: string, accessTokenTtl?: number, refreshTokenTtl?: number, scope?: string[] }): Promise<void> {
-        this.tokenCacheKey = [packageName + "/" + packageVersion, opts.username, opts.extension, ].join("$");
-        let tokenData = this.tokenCache.getItem(this.tokenCacheKey);
-        if (tokenData) {
-            this.token = new Token(JSON.parse(tokenData));
-            if (!this.token.expired()) {
-                return Promise.resolve(null);
-            }
+        let tokenData = this.tokenStore.get();
+        if (tokenData && tokenData.username == opts.username && tokenData.extension == opts.extension && !tokenData.token.expired()) {
+            return Promise.resolve(null);;
         }
         let body = {
             grant_type: "password",
@@ -121,13 +116,17 @@ export default class Service {
             if (json["errors"] || json["errorCode"]) {
                 throw json;
             }
-            this.token = new Token(json, Date.now() - startTime);
-            this.tokenCache.setItem(this.tokenCacheKey, JSON.stringify(this.token));
+            this.tokenStore.save({
+                username: opts.username,
+                extension: opts.extension,
+                token: new Token(json, Date.now() - startTime)
+            });
         });
     }
 
     logout(): Promise<void> {
-        if (!this.token) {
+        let tokenData = this.tokenStore.get();
+        if (!tokenData) {
             return Promise.resolve(null);
         }
         return fetch(this.server + REVOKE_URL, {
@@ -136,31 +135,32 @@ export default class Service {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + this.basicAuth()
             },
-            body: querystring.stringify({ token: this.token.accessToken })
+            body: querystring.stringify({ token: tokenData.token.accessToken })
         }).then(() => {
-            this.token = null;
-            this.tokenCache.setItem(this.tokenCacheKey, "");
+            this.tokenStore.clear();
         });
     }
 
     /** Only one request will be sent at the same time. */
     refreshToken(): Promise<void> {
-        if (!this.token) {
-            return Promise.reject(new Error("Not authorized."));
+        let tokenData = this.tokenStore.get();
+        if (!tokenData) {
+            return Promise.reject(new Error("No access token, can not refresh token."));
         }
-        if (this.refreshTokenPromise) {
-            return this.refreshTokenPromise;
+        if (this.ongoingTokenRefresh) {
+            return this.ongoingTokenRefresh;
         }
-        if (this.token.refreshTokenExpired()) {
-            return Promise.reject(new Error("Refresh token has expired."));
+        let token = tokenData.token;
+        if (token.refreshTokenExpired()) {
+            return Promise.reject(new Error("Refresh token has expired, can not refresh."));
         }
         let body = {
-            refresh_token: this.token.refreshToken,
+            refresh_token: token.refreshToken,
             grant_type: "refresh_token",
-            endpoint_id: this.token.endpointId
+            endpoint_id: token.endpointId
         };
         let startTime = Date.now();
-        this.refreshTokenPromise = fetch(this.server + TOKEN_URL, {
+        this.ongoingTokenRefresh = fetch(this.server + TOKEN_URL, {
             method: "POST",
             body: querystring.stringify(body),
             headers: {
@@ -168,12 +168,14 @@ export default class Service {
                 "Authorization": "Basic " + this.basicAuth()
             }
         }).then(res => res.json()).then(json => {
-            this.refreshTokenPromise = null;
-            this.token = new Token(json, Date.now() - startTime);
-        }).catch(e => {
-            this.refreshTokenPromise = null;
+            this.ongoingTokenRefresh = null;
+            tokenData.token = new Token(json, Date.now() - startTime);
+            this.tokenStore.save(tokenData);
+        }, e => {
+            this.ongoingTokenRefresh = null;
             throw e;
         });
-        return this.refreshTokenPromise;
+        return this.ongoingTokenRefresh;
     }
+
 }

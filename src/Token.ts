@@ -2,7 +2,7 @@ export default class Token {
     /** timeSpent: Time in ms spent fetching token. */
     constructor(data, timeSpent?: number) {
         if (timeSpent == null) {    // From cached data
-            for(let p in data) {
+            for (let p in data) {
                 this[p] = data[p];
             }
             return;
@@ -35,20 +35,65 @@ export default class Token {
     }
 }
 
-export interface TokenCache {
-    setItem(key: string, data: string);
-    getItem(key: string): string;
+interface TokenData {
+    username: string;
+    extension: string;
+    token: Token;
 }
 
-export class MemoryCache {
-    data: any;
-    constructor() {
-        this.data = {};
+interface TokenStore {
+    save(data: TokenData): void;
+    get(): TokenData;
+    clear(): void;
+}
+
+interface TokenStoreConstructor {
+    new (key: string): TokenStore;
+}
+
+
+class LocalStorageTokenStore implements TokenStore {
+    key: string;
+    constructor(key: string) {
+        this.key = key;
     }
-    setItem(key: string, data: string) {
-        this.data[key] = data;
+    save(data: TokenData) {
+        localStorage[this.key] = JSON.stringify(data);
     }
-    getItem(key: string): string {
-        return this.data[key];
+    get(): TokenData {
+        let data = localStorage[this.key];
+        if (data) {
+            let json: TokenData = JSON.parse(data);
+            json.token = new Token(json.token);
+            return json;
+        }
+    }
+    clear() {
+        localStorage[this.key] = "";
     }
 }
+
+let memStore = {};
+class MemoryTokenStore implements TokenStore {
+    key: string;
+    constructor(key: string) {
+        this.key = key;
+    }
+    save(data: TokenData) {
+        memStore[this.key] = data;
+    }
+    get(): TokenData {
+        return memStore[this.key];
+    }
+    clear() {
+        memStore[this.key] = null;
+    }
+}
+
+let DefaultTokenStore: TokenStoreConstructor = typeof localStorage != "undefined" ? LocalStorageTokenStore : MemoryTokenStore;
+
+export {
+TokenStore,
+MemoryTokenStore,
+DefaultTokenStore
+};
