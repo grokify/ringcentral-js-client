@@ -1,18 +1,15 @@
-/// <reference path="./typings/tsd.d.ts" />
-
-import * as fetch from "isomorphic-fetch";
 import testConfig from "./test/config";
 import Service from "./Service";
+import {expect} from "chai";
 
 let authConfig;
 let service: Service;
 
 before(() => {
-    return fetch(testConfig.authDataUrl).then(res => res.json())
-        .then(json => {
-            authConfig = json;
-            service = new Service(authConfig.app);
-        });
+    return testConfig.then(json => {
+        authConfig = json;
+        service = new Service(authConfig.app);
+    });
 });
 
 describe("Auth", () => {
@@ -21,9 +18,7 @@ describe("Auth", () => {
         return service.login({ username: "", password: "" }).then(() => {
             throw "Should not login";
         }, e => {
-            if (e.error != "invalid_request") {
-                throw new Error("Wrong error code.");
-            }
+            expect(e.error).to.equal("invalid_request");
         });
     });
 
@@ -31,32 +26,28 @@ describe("Auth", () => {
         return service.login({ username: "xxx", password: "xxx" }).then(() => {
             throw "Should not login";
         }, e => {
-            if (e.error != "invalid_grant") {
-                throw new Error("Wrong error code.");
-            }
+            expect(e.error).to.equal("invalid_grant");
         });
     });
 
     it("fail login, wrong appKey/appSecret", () => {
         let rightKey = service.appKey;
-        service.appKey = Math.random() * 100000 + "";
-        let p = service.login(authConfig.user).then(() => {
-            throw "Should not login";
+        service.appKey = "xx";
+        let p = service.logout().then(() => service.login(authConfig.user)).then(() => {
+            service.appKey = rightKey;
+            throw "Should not login:";
         }, e => {
-            if (e.error != "invalid_client") {
-                throw new Error("Wrong error code.");
-            }
+            service.appKey = rightKey;
+            expect(e.error).to.equal("invalid_client");
         });
-        service.appKey = rightKey;
         return p;
     });
 
     it("login with right credential", () => {
         return service.login(authConfig.user).then(() => {
             let token = service.tokenStore.get().token;
-            if (token.expired() || token.refreshTokenExpired()) {
-                throw "Token not valid";
-            }
+            expect(token.expired()).to.be.false;
+            expect(token.refreshTokenExpired()).to.be.false;
         });
     });
 
@@ -68,9 +59,7 @@ describe("Auth", () => {
             return service2.login(authConfig.user);
         }).then(() => {
             let cur = service2.tokenStore.get().token.accessToken;
-            if (cachedAccessToken != cur) {
-                throw "Access token not the same." + cachedAccessToken + " : " + cur;
-            }
+            expect(cachedAccessToken).to.eql(cur);
         });
     });
 
@@ -78,9 +67,7 @@ describe("Auth", () => {
         return service.login(authConfig.user).then(() => {
             let p1 = service.refreshToken();
             let p2 = service.refreshToken();
-            if (p1 != p2) {
-                throw new Error("Mutilp requests for token refresh are sent at the same time");
-            }
+            expect(p1).to.eq(p2);
         });
     });
 
@@ -91,9 +78,7 @@ describe("Auth", () => {
         }).then(() => {
             throw new Error("Should not success.");
         }, e => {
-            if (e.name != NotLoginError) {
-                throw new Error("Wrong error code.");
-            }
+            expect(e.name).to.eq(NotLoginError);
         });
     });
 
@@ -103,16 +88,14 @@ describe("Auth", () => {
         }).then(() => {
             throw new Error("Should not success.");
         }, e => {
-            if (e.name != NotLoginError) {
-                throw new Error("Wrong error code.");
-            }
+            expect(e.name).to.eq(NotLoginError);
         });
     });
 
     it("Logout expired accessToken.");
 
     it("Refresh Token", () => {
-        return service.refreshToken();
+        return service.login(authConfig.user).then(() => service.refreshToken());
     });
 
     it("Refresh token with wrong info");

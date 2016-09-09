@@ -1,4 +1,3 @@
-import * as fetch from "isomorphic-fetch";
 import testConfig from "./config";
 import Client from "../Client";
 import {expect} from "chai";
@@ -10,32 +9,49 @@ let client: Client;
 
 before(function () {
     // runs before all tests in this block
-    return fetch(testConfig.authDataUrl).then(res => res.json()).then(conf => {
+    return testConfig.then(conf => {
         config = conf;
         client = new Client(config.app);
-        return client.login(config.user);
     });
 });
 
+beforeEach(() => client.login(config.user));
+
 describe("Account", function () {
+
     it("Get Account info", function () {
-        return client.account().get();
+        return client.account().get().then(account => {
+            expect(account).to.contain.keys(["id", "uri", "mainNumber", "operator", "serviceInfo", "setupWizardState", "status"]);
+        });
     });
 
     it("Get Account info with id not exists should return 404", function () {
         return client.account("accountIdNotExist").get().catch(function (e) {
-            expect(e.apiResponse.response().status).to.equal(404);
+            expect(e.errorCode).to.equal("InvalidParameter");
         });
     });
 });
 
 describe("Extension", function () {
+    let extensionProps = ["uri", "id", "extensionNumber", "contact", "name", "type", "status", "permissions", "profileImage"];
+
+    it("get current extension", () => {
+        return client.account().extension().get().then(ext => {
+            expect(ext).to.contain.keys(extensionProps);
+        });
+    });
+
     it("Get extension list", function () {
-        return client.account().extension().list();
+        return client.account().extension().list().then(exts => {
+            shouldBePagingResult(exts);
+            expect(exts.records[0]).to.has.keys(extensionProps);
+        });
     });
 
     it("Union type parameters, update extension info", function () {
-        return client.account().extension().put({ status: "Enabled" });
+        return client.account().extension().put({ status: "Enabled" }).then(ext => {
+            expect(ext).to.contain.keys(extensionProps);
+        });
     });
 });
 
@@ -109,3 +125,7 @@ describe("Call Log", () => {
         return client.account().extension().callLog().list({ perPage: 2 });
     });
 });
+
+function shouldBePagingResult(list) {
+    expect(list).to.has.keys(["navigation", "paging", "records"]);
+}

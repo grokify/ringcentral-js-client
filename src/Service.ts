@@ -57,9 +57,13 @@ export default class Service {
         return this.send(url, query, { method: "POST", body: body });
     }
 
-    put(url: string, body: {}, query?: {}): Promise<Response> {
-        let a;
-        return a;
+    put(url: string, body: any, query?: {}): Promise<Response> {
+        let headers: { [index: string]: string; } = {};
+        if (isPlainObject(body)) {
+            body = JSON.stringify(body);
+            headers["content-type"] = "application/json";
+        }
+        return this.send(url, query, { method: "PUT", body: body, headers: headers });
     }
 
     /**

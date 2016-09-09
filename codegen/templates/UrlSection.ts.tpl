@@ -52,8 +52,8 @@ export default class {{name}} extends UrlSection {
         {{@key}}?: {{{this.type}}};
         {{/each}}
     }): Promise<PagingResult<{{modelType}}>> {
-        return this.getService().get(this.getEndpoint(false), options).then(function (res) {
-            return new PagingResult<{{modelType}}>(res.json());
+        return this.getService().get(this.getEndpoint(false), options).then(res => res.json()).then(json => {
+            return new PagingResult<{{modelType}}>(json);
         });
     }
     {{/if}}
