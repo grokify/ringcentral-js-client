@@ -17,14 +17,41 @@ before(() => {
 
 describe("Auth", () => {
 
-    it("Login with wrong credential", () => {
+    it("fail login, empty credential", () => {
         return service.login({ username: "", password: "" }).then(() => {
             throw "Should not login";
         }, e => {
+            if (e.error != "invalid_request") {
+                throw new Error("Wrong error code.");
+            }
         });
     });
 
-    it("Login with right credential", () => {
+    it("fail login, wrong credential", () => {
+        return service.login({ username: "xxx", password: "xxx" }).then(() => {
+            throw "Should not login";
+        }, e => {
+            if (e.error != "invalid_grant") {
+                throw new Error("Wrong error code.");
+            }
+        });
+    });
+
+    it("fail login, wrong appKey/appSecret", () => {
+        let rightKey = service.appKey;
+        service.appKey = Math.random() * 100000 + "";
+        let p = service.login(authConfig.user).then(() => {
+            throw "Should not login";
+        }, e => {
+            if (e.error != "invalid_client") {
+                throw new Error("Wrong error code.");
+            }
+        });
+        service.appKey = rightKey;
+        return p;
+    });
+
+    it("login with right credential", () => {
         return service.login(authConfig.user).then(() => {
             let token = service.tokenStore.get().token;
             if (token.expired() || token.refreshTokenExpired()) {
@@ -59,7 +86,7 @@ describe("Auth", () => {
 
     let NotLoginError = "NotLogin";
     it("Call api before login", () => {
-        return service.logout().then(()=>{
+        return service.logout().then(() => {
             return service.get("/some-api");
         }).then(() => {
             throw new Error("Should not success.");
@@ -71,7 +98,7 @@ describe("Auth", () => {
     });
 
     it("Refresh token before login", () => {
-        return service.logout().then(()=>{
+        return service.logout().then(() => {
             return service.refreshToken();
         }).then(() => {
             throw new Error("Should not success.");

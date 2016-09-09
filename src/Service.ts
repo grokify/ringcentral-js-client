@@ -1,8 +1,8 @@
 import * as fetch from "isomorphic-fetch";
 import * as querystring from "querystring";
 import * as isPlainObject from "is-plain-object";
-import {name as packageName, version as packageVersion} from "./generated/package";
-import Token, {TokenStore, DefaultTokenStore} from "./Token";
+import { name as packageName, version as packageVersion } from "./generated/package";
+import Token, { TokenStore, DefaultTokenStore } from "./Token";
 
 const SERVER_PRODUCTION = "https://platform.ringcentral.com";
 const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
@@ -54,7 +54,7 @@ export default class Service {
         if (isPlainObject(body)) {
             body = JSON.stringify(body);
         }
-        return this.send(url, query, {method: "POST", body: body});
+        return this.send(url, query, { method: "POST", body: body });
     }
 
     put(url: string, body: {}, query?: {}): Promise<Response> {
@@ -87,7 +87,14 @@ export default class Service {
         opts.headers["Authorization"] = token.type + " " + token.accessToken;
         opts.headers["Client-Id"] = this.appKey;
         opts.headers["X-User-Agent"] = packageName + "/" + packageVersion;
-        return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + querystring.stringify(query), opts);
+        return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + querystring.stringify(query), opts).then(res => {
+            let isJson = isJsonRes(res);
+            if (!res.ok) {
+                let errorResult = isJson ? res.json() : res.text();
+                return errorResult.then(result => Promise.reject(result));
+            }
+            return res;
+        });
     }
 
     login(opts: { username: string; password: string; extension?: string, accessTokenTtl?: number, refreshTokenTtl?: number, scope?: string[] }): Promise<void> {
@@ -112,10 +119,14 @@ export default class Service {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + this.basicAuth()
             }
-        }).then(res => res.json()).then(json => {
-            if (json["errors"] || json["errorCode"]) {
-                throw json;
+        }).then(res => {
+            let isJson = isJsonRes(res);
+            if (!res.ok) {
+                let errorResult = isJson ? res.json() : res.text();
+                return errorResult.then(result => Promise.reject(result));
             }
+            return res.json();
+        }).then(json => {
             this.tokenStore.save({
                 username: opts.username,
                 extension: opts.extension,
@@ -182,12 +193,17 @@ export default class Service {
 
 }
 
+function isJsonRes(res: Response) {
+    let ct = res.headers.get("content-type");
+    return ct && ct.match("application/json");
+}
+
 interface ServiceOptions {
     server?: string;
     appKey: string;
     appSecret: string;
     /** By default, token is stored in localStorage in browser and memory in node. */
-    tokenStore?: TokenStore;    
+    tokenStore?: TokenStore;
 }
 
 export {
