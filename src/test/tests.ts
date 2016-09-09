@@ -83,7 +83,7 @@ describe("Binary request", function () {
 });
 
 describe("Fax", function () {
-    it("Send fax, post form data", function () {
+    it("send fax, post form data", function () {
         let attachments;
         if (fs.createReadStream) {
             attachments = ["Text attentment for test. Followed by a png picture.", fs.createReadStream(imgPath)];
@@ -91,6 +91,16 @@ describe("Fax", function () {
             attachments = ["Test fax test sent from browser, " + navigator.userAgent];
         }
         return client.account().extension().fax().post({ to: [{ phoneNumber: "+16507411615" }] }, attachments);
+    });
+
+    it("send fax fail, empty parameter", () => {
+        return client.account().extension().fax().post({}, []).then(msg => {
+            throw new Error("should not send.");
+        }, e => {
+            if (e.errorCode != "InvalidParameter") {
+                throw new Error("Wrong errorCode.");
+            }
+        });
     });
 });
 
