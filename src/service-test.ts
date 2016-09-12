@@ -31,16 +31,33 @@ describe("Auth", () => {
     });
 
     it("fail login, wrong appKey/appSecret", () => {
-        let rightKey = service.appKey;
-        service.appKey = "xx";
-        let p = service.logout().then(() => service.login(authConfig.user)).then(() => {
-            service.appKey = rightKey;
+        let service2 = new Service({appKey: "xx", appSecret: "xx"});
+        return service2.login(authConfig.user).then(() => {
             throw "Should not login:";
         }, e => {
-            service.appKey = rightKey;
             expect(e.error).to.equal("invalid_client");
         });
-        return p;
+    });
+
+    let NotLoginError = "NotLogin";
+    it("Call api before login", () => {
+        return service.logout().then(() => {
+            return service.get("/some-api");
+        }).then(() => {
+            throw new Error("Should not success.");
+        }, e => {
+            expect(e.name).to.eq(NotLoginError);
+        });
+    });
+
+    it("Refresh token before login", () => {
+        return service.logout().then(() => {
+            return service.refreshToken();
+        }).then(() => {
+            throw new Error("Should not success.");
+        }, e => {
+            expect(e.name).to.eq(NotLoginError);
+        });
     });
 
     it("login with right credential", () => {
@@ -71,26 +88,7 @@ describe("Auth", () => {
         });
     });
 
-    let NotLoginError = "NotLogin";
-    it("Call api before login", () => {
-        return service.logout().then(() => {
-            return service.get("/some-api");
-        }).then(() => {
-            throw new Error("Should not success.");
-        }, e => {
-            expect(e.name).to.eq(NotLoginError);
-        });
-    });
-
-    it("Refresh token before login", () => {
-        return service.logout().then(() => {
-            return service.refreshToken();
-        }).then(() => {
-            throw new Error("Should not success.");
-        }, e => {
-            expect(e.name).to.eq(NotLoginError);
-        });
-    });
+    
 
     it("Logout expired accessToken.");
 

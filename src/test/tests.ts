@@ -1,11 +1,14 @@
 import testConfig from "./config";
 import Client from "../Client";
-import {expect} from "chai";
+import { expect } from "chai";
 import * as fs from "fs";
 import "../service-test";
 
 let config: any;
 let client: Client;
+
+let aYearAgo = new Date();
+aYearAgo.setFullYear(aYearAgo.getFullYear() - 1);
 
 before(function () {
     // runs before all tests in this block
@@ -56,8 +59,6 @@ describe("Extension", function () {
 });
 
 describe("Binary response", function () {
-    let aYearAgo = new Date();
-    aYearAgo.setFullYear(aYearAgo.getFullYear() - 1);
     it("Get message content as binary", function () {
         let ext = client.account().extension();
         return ext.messageStore().list({ dateFrom: aYearAgo.toISOString() }).then(function (msgs) {
@@ -66,7 +67,9 @@ describe("Binary response", function () {
             }
             return msgs.records[0];
         }).then(function (msg) {
-            return ext.messageStore(msg.id).content(msg.attachments[0].id).get();
+            return ext.messageStore(msg.id).content(msg.attachments[0].id).get().then(atch => {
+                // expect(atch.headers.get("content-type")).to.has.string("text/plain");
+            });
         });
     });
 
@@ -78,7 +81,9 @@ describe("Binary response", function () {
             }
             return callLogs.records[0].recording;
         }).then(function (recording) {
-            return client.account().recording(recording.id + "").content().get();
+            return client.account().recording(recording.id + "").content().get().then(content => {
+                expect(content.headers.get("content-type")).to.has.string("audio/mpeg");
+            });
         });
     });
 
@@ -113,16 +118,17 @@ describe("Fax", function () {
         return client.account().extension().fax().post({}, []).then(msg => {
             throw new Error("should not send.");
         }, e => {
-            if (e.errorCode != "InvalidParameter") {
-                throw new Error("Wrong errorCode.");
-            }
+            expect(e.errorCode).to.eq("InvalidParameter");
         });
     });
 });
 
 describe("Call Log", () => {
     it("Get call log", () => {
-        return client.account().extension().callLog().list({ perPage: 2 });
+        return client.account().extension().callLog().list({ perPage: 2, dateFrom: aYearAgo.toISOString() }).then(callLogs => {
+            shouldBePagingResult(callLogs);
+            expect(callLogs.records[0]).to.has.keys(["uri", "id", "sessionId", "startTime", "duration", "type", "direction", "action", "result", "to", "from"]);
+        });
     });
 });
 
