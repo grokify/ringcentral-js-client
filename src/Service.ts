@@ -2,7 +2,7 @@ import * as fetch from "isomorphic-fetch";
 import { stringify } from "querystring";
 import { name as packageName, version as packageVersion } from "./generated/package";
 import Token, { TokenStore, DefaultTokenStore } from "./Token";
-import isKnownReqBodyType from "./util/is-known-fetch-body-type";
+import isKnownReqBodyType from "known-fetch-body";
 
 const SERVER_PRODUCTION = "https://platform.ringcentral.com";
 const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";

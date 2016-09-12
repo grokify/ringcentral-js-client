@@ -15,7 +15,8 @@
   },
   "dependencies": {
     "form-data": "^1.0.0-rc4",
-    "isomorphic-fetch": "^2.2.1"
+    "isomorphic-fetch": "^2.2.1",
+    "known-fetch-body": "^0.1.1"
   },
   "devDependencies": {
     "chai": "^3.0.0",
