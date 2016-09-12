@@ -51,10 +51,12 @@ export default class Service {
     }
 
     post(url: string, body: any, query?: {}): Promise<Response> {
+        let headers = {};
         if (isPlainObject(body)) {
             body = JSON.stringify(body);
+            headers["content-type"] = "application/json";
         }
-        return this.send(url, query, { method: "POST", body: body });
+        return this.send(url, query, { method: "POST", body: body, headers: headers });
     }
 
     put(url: string, body: any, query?: {}): Promise<Response> {

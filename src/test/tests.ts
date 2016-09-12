@@ -132,6 +132,22 @@ describe("Call Log", () => {
     });
 });
 
+describe("post", () => {
+    it("send sms, post plain object", () => {
+        return client.account().extension().sms().post({ to: [{ phoneNumber: "+16507411615" }], from: { phoneNumber: config.user.username }, text: "test sms text content." }).then(sms => {
+            expect(sms).to.has.keys(["uri", "id", "to", "from", "type", "creationTime", "readStatus", "priority", "attachments", "direction", "availability", "subject", "messageStatus", "smsSendingAttemptsCount", "conversationId", "conversation", "lastModifiedTime"]);
+        });
+    });
+
+    it("send sms, without from", () => {
+        return client.account().extension().sms().post({ to: [{ phoneNumber: "+16507411615" }], text: "test sms text content." }).then(sms => {
+            throw new Error("should fail");
+        }).catch(e => {
+            expect(e.errorCode).to.eq("InvalidParameter");
+        });
+    });
+});
+
 function shouldBePagingResult(list) {
     expect(list).to.has.keys(["navigation", "paging", "records"]);
 }
