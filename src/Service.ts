@@ -1,5 +1,5 @@
 import * as fetch from "isomorphic-fetch";
-import * as querystring from "querystring";
+import { stringify } from "querystring";
 import { name as packageName, version as packageVersion } from "./generated/package";
 import Token, { TokenStore, DefaultTokenStore } from "./Token";
 import isKnownReqBodyType from "./util/is-known-fetch-body-type";
@@ -84,7 +84,7 @@ export default class Service {
             opts.body = JSON.stringify(opts.body);
             headers["content-type"] = "application/json";
         }
-        return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + querystring.stringify(query), opts).then(res => {
+        return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + stringify(query), opts).then(res => {
             let isJson = isJsonRes(res);
             if (!res.ok) {
                 let errorResult = isJson ? res.json() : res.text();
@@ -110,7 +110,7 @@ export default class Service {
         };
         let startTime = Date.now();
         return fetch(this.server + TOKEN_URL, {
-            body: querystring.stringify(body),
+            body: stringify(body),
             method: "POST",
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
@@ -143,7 +143,7 @@ export default class Service {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + this.basicAuth()
             },
-            body: querystring.stringify({ token: tokenData.token.accessToken })
+            body: stringify({ token: tokenData.token.accessToken })
         }).then(() => {
             this.tokenStore.clear();
         });
@@ -172,7 +172,7 @@ export default class Service {
         let startTime = Date.now();
         this.ongoingTokenRefresh = fetch(this.server + TOKEN_URL, {
             method: "POST",
-            body: querystring.stringify(body),
+            body: stringify(body),
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + this.basicAuth()

@@ -1,7 +1,7 @@
 import testConfig from "./config";
 import Client from "../Client";
 import { expect } from "chai";
-import * as fs from "fs";
+import { createReadStream } from "fs";
 import "../service-test";
 
 let config: any;
@@ -91,23 +91,23 @@ describe("Binary response", function () {
 
 let imgPath = __dirname + "/res/banner_index_logged.png";
 describe("Binary request", function () {
-    if (!fs.createReadStream) {
+    if (!createReadStream) {
         return;
     }
     it("Put profile image, input binary, response is empty.", function () {
-        return client.account().extension().profileImage().put(fs.createReadStream(imgPath));
+        return client.account().extension().profileImage().put(createReadStream(imgPath));
     });
 
     it("Post profile image, input binary, response is empty.", function () {
-        return client.account().extension().profileImage().post(fs.createReadStream(imgPath));
+        return client.account().extension().profileImage().post(createReadStream(imgPath));
     });
 });
 
 describe("Fax", function () {
     it("send fax, post form data", function () {
         let attachments;
-        if (fs.createReadStream) {
-            attachments = ["Text attentment for test. Followed by a png picture.", fs.createReadStream(imgPath)];
+        if (createReadStream) {
+            attachments = ["Text attentment for test. Followed by a png picture.", createReadStream(imgPath)];
         } else {
             attachments = ["Test fax test sent from browser, " + navigator.userAgent];
         }
