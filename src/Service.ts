@@ -1,8 +1,8 @@
 import * as fetch from "isomorphic-fetch";
 import * as querystring from "querystring";
-import * as isPlainObject from "is-plain-object";
 import { name as packageName, version as packageVersion } from "./generated/package";
 import Token, { TokenStore, DefaultTokenStore } from "./Token";
+import isKnownReqBodyType from "./util/is-known-fetch-body-type";
 
 const SERVER_PRODUCTION = "https://platform.ringcentral.com";
 const SERVER_SANDBOX = "https://platform.devtest.ringcentral.com";
@@ -35,7 +35,7 @@ export default class Service {
     }
 
     /**
-     * Sent GET http method
+     * Send http GET method
      */
     get(url: string, query?: {}): Promise<Response> {
         return this.send(url, query);
@@ -45,10 +45,12 @@ export default class Service {
         return this.send(url, query, { method: "DELETE" });
     }
 
+    /** Body can be Blob, FormData, URLSearchParams, String, Buffer or stream.Readable, any other type, plain object or instance of class will stringified as json. */
     post(url: string, body: any, query?: {}): Promise<Response> {
         return this.send(url, query, { method: "POST", body: body });
     }
 
+    /** Type of body is the same as post. */
     put(url: string, body: any, query?: {}): Promise<Response> {
         return this.send(url, query, { method: "PUT", body: body });
     }
@@ -78,7 +80,7 @@ export default class Service {
         headers["Authorization"] = token.type + " " + token.accessToken;
         headers["Client-Id"] = this.appKey;
         headers["X-User-Agent"] = packageName + "/" + packageVersion;
-        if (isPlainObject(opts.body)) {
+        if (!isKnownReqBodyType(opts.body)) {
             opts.body = JSON.stringify(opts.body);
             headers["content-type"] = "application/json";
         }
@@ -200,6 +202,7 @@ interface ServiceOptions {
     /** By default, token is stored in localStorage in browser and memory in node. */
     tokenStore?: TokenStore;
 }
+
 
 export {
     SERVER_PRODUCTION,
