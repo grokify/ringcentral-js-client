@@ -42,30 +42,15 @@ export default class Service {
     }
 
     delete(url: string, query?: {}): Promise<Response> {
-        if (query) {
-            url += "?" + querystring.stringify(query)
-        }
-        return this.send(url, query, {
-            method: "DELETE"
-        });
+        return this.send(url, query, { method: "DELETE" });
     }
 
     post(url: string, body: any, query?: {}): Promise<Response> {
-        let headers = {};
-        if (isPlainObject(body)) {
-            body = JSON.stringify(body);
-            headers["content-type"] = "application/json";
-        }
-        return this.send(url, query, { method: "POST", body: body, headers: headers });
+        return this.send(url, query, { method: "POST", body: body });
     }
 
     put(url: string, body: any, query?: {}): Promise<Response> {
-        let headers: { [index: string]: string; } = {};
-        if (isPlainObject(body)) {
-            body = JSON.stringify(body);
-            headers["content-type"] = "application/json";
-        }
-        return this.send(url, query, { method: "PUT", body: body, headers: headers });
+        return this.send(url, query, { method: "PUT", body: body });
     }
 
     /**
@@ -89,10 +74,14 @@ export default class Service {
             }
         }
         opts = opts || {};
-        opts.headers = opts.headers || {};
-        opts.headers["Authorization"] = token.type + " " + token.accessToken;
-        opts.headers["Client-Id"] = this.appKey;
-        opts.headers["X-User-Agent"] = packageName + "/" + packageVersion;
+        let headers = opts.headers = opts.headers || {};
+        headers["Authorization"] = token.type + " " + token.accessToken;
+        headers["Client-Id"] = this.appKey;
+        headers["X-User-Agent"] = packageName + "/" + packageVersion;
+        if (isPlainObject(opts.body)) {
+            opts.body = JSON.stringify(opts.body);
+            headers["content-type"] = "application/json";
+        }
         return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + querystring.stringify(query), opts).then(res => {
             let isJson = isJsonRes(res);
             if (!res.ok) {
@@ -213,8 +202,8 @@ interface ServiceOptions {
 }
 
 export {
-SERVER_PRODUCTION,
-SERVER_SANDBOX,
-SERVER_VERSION,
-ServiceOptions
+    SERVER_PRODUCTION,
+    SERVER_SANDBOX,
+    SERVER_VERSION,
+    ServiceOptions
 }
