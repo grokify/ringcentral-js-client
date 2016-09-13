@@ -97,19 +97,13 @@ export default class Service extends EventEmitter {
             opts.body = JSON.stringify(opts.body);
             headers["content-type"] = "application/json";
         }
-        return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + stringify(query), opts).then(res => {
-            let isJson = isJsonRes(res);
-            if (!res.ok) {
-                let errorResult = isJson ? res.json() : res.text();
-                return errorResult.then(result => Promise.reject(result));
-            }
-            return res;
-        });
+        return fetch(this.server + "/restapi/" + SERVER_VERSION + endpoint + "?" + stringify(query), opts).then(detectResponseError);
     }
 
     login(opts: { username: string; password: string; extension?: string, accessTokenTtl?: number, refreshTokenTtl?: number, scope?: string[] }): Promise<void> {
         let tokenData = this.tokenStore.get();
-        if (tokenData && tokenData.username == opts.username && tokenData.extension == opts.extension && !tokenData.token.expired()) {
+        if (tokenData && tokenData.username == opts.username && tokenData.extension == opts.extension
+            && !tokenData.token.expired()) {
             return Promise.resolve(null);;
         }
         let body = {
@@ -130,23 +124,16 @@ export default class Service extends EventEmitter {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + this.basicAuth()
             }
-        }).then(res => {
-            if (res.ok) {
-                return res.json();
-            }
-            let isJson = isJsonRes(res);
-            let errorResult = isJson ? res.json() : res.text();
-            return errorResult.then(err => {
-                this.emit(EventLoginError, err);
-                return Promise.reject(err);
-            });
-        }).then(json => {
+        }).then(detectResponseError).then(res => res.json()).then(json => {
             this.tokenStore.save({
                 username: opts.username,
                 extension: opts.extension,
                 token: new Token(json, Date.now() - startTime)
             });
             this.emit(EventLoginSuccess);
+        }, err => {
+            this.emit(EventLoginError, err);
+            throw err;
         });
     }
 
@@ -155,6 +142,7 @@ export default class Service extends EventEmitter {
         if (!tokenData) {
             return Promise.resolve(null);
         }
+        this.emit(EventLogoutStart);
         return fetch(this.server + REVOKE_URL, {
             method: "POST",
             headers: {
@@ -162,8 +150,12 @@ export default class Service extends EventEmitter {
                 "Authorization": "Basic " + this.basicAuth()
             },
             body: stringify({ token: tokenData.token.accessToken })
-        }).then(() => {
+        }).then(detectResponseError).then(() => {
             this.tokenStore.clear();
+            this.emit(EventLogoutSuccess);
+        }, err => {
+            this.emit(EventLogoutError, err);
+            throw err;
         });
     }
 
@@ -178,8 +170,10 @@ export default class Service extends EventEmitter {
         if (this.ongoingTokenRefresh) {
             return this.ongoingTokenRefresh;
         }
+        this.emit(EventRefreshStart);
         let token = tokenData.token;
         if (token.refreshTokenExpired()) {
+            this.emit(EventRefreshError, new Error("Refresh token expired."));
             return Promise.reject(new Error("Refresh token has expired, can not refresh."));
         }
         let body = {
@@ -195,12 +189,14 @@ export default class Service extends EventEmitter {
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Authorization": "Basic " + this.basicAuth()
             }
-        }).then(res => res.json()).then(json => {
+        }).then(detectResponseError).then(res => res.json()).then(json => {
             this.ongoingTokenRefresh = null;
             tokenData.token = new Token(json, Date.now() - startTime);
             this.tokenStore.save(tokenData);
+            this.emit(EventRefreshSuccess);
         }, e => {
             this.ongoingTokenRefresh = null;
+            this.emit(EventRefreshError, e);
             throw e;
         });
         return this.ongoingTokenRefresh;
@@ -211,6 +207,15 @@ export default class Service extends EventEmitter {
 function isJsonRes(res: Response) {
     let ct = res.headers.get("content-type");
     return ct && ct.match("application/json");
+}
+
+function detectResponseError(res: Response): Response | Promise<Response> {
+    if (res.ok) {
+        return res;
+    }
+    let isJson = isJsonRes(res);
+    let errorResult = isJson ? res.json() : res.text();
+    return errorResult.then(err => Promise.reject(err));
 }
 
 interface ServiceOptions {
