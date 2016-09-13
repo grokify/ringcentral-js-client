@@ -1,5 +1,6 @@
 import * as fetch from "isomorphic-fetch";
 import { stringify } from "querystring";
+import { EventEmitter } from "events";
 import { name as packageName, version as packageVersion } from "./generated/package";
 import Token, { TokenStore, DefaultTokenStore } from "./Token";
 import isKnownReqBodyType from "known-fetch-body";
@@ -12,10 +13,21 @@ const SERVER_VERSION = "v1.0";
 const TOKEN_URL = "/restapi/oauth/token";
 const REVOKE_URL = "/restapi/oauth/revoke";
 
+// Auth events
+const EventLoginStart = "LoginStart";
+const EventLoginSuccess = "LoginSuccess";
+const EventLoginError = "LoginError";
+const EventRefreshStart = "RefreshStart";
+const EventRefreshSuccess = "RefreshSuccess";
+const EventRefreshError = "RefreshError";
+const EventLogoutStart = "LogoutStart";
+const EventLogoutSuccess = "LogoutSuccess";
+const EventLogoutError = "LogoutError";
+
 /**
  * A wrapper for sending http requests to RingCentralService.
  */
-export default class Service {
+export default class Service extends EventEmitter {
     server: string;
     appKey: string;
     appSecret: string;
@@ -24,6 +36,7 @@ export default class Service {
     private ongoingTokenRefresh: Promise<void>;
 
     constructor(opts: ServiceOptions) {
+        super();
         this.server = opts.server || SERVER_PRODUCTION;
         this.appKey = opts.appKey;
         this.appSecret = opts.appSecret;
@@ -108,6 +121,7 @@ export default class Service {
             refresh_token_ttl: opts.refreshTokenTtl,
             scope: opts.scope && opts.scope.join(" ")
         };
+        this.emit(EventLoginStart);
         let startTime = Date.now();
         return fetch(this.server + TOKEN_URL, {
             body: stringify(body),
@@ -117,18 +131,22 @@ export default class Service {
                 "Authorization": "Basic " + this.basicAuth()
             }
         }).then(res => {
-            let isJson = isJsonRes(res);
-            if (!res.ok) {
-                let errorResult = isJson ? res.json() : res.text();
-                return errorResult.then(result => Promise.reject(result));
+            if (res.ok) {
+                return res.json();
             }
-            return res.json();
+            let isJson = isJsonRes(res);
+            let errorResult = isJson ? res.json() : res.text();
+            return errorResult.then(err => {
+                this.emit(EventLoginError, err);
+                return Promise.reject(err);
+            });
         }).then(json => {
             this.tokenStore.save({
                 username: opts.username,
                 extension: opts.extension,
                 token: new Token(json, Date.now() - startTime)
             });
+            this.emit(EventLoginSuccess);
         });
     }
 
@@ -208,5 +226,16 @@ export {
     SERVER_PRODUCTION,
     SERVER_SANDBOX,
     SERVER_VERSION,
+
+    EventLoginStart,
+    EventLoginSuccess,
+    EventLoginError,
+    EventRefreshStart,
+    EventRefreshSuccess,
+    EventRefreshError,
+    EventLogoutStart,
+    EventLogoutSuccess,
+    EventLogoutError,
+
     ServiceOptions
 }

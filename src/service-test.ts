@@ -1,6 +1,6 @@
 import testConfig from "./test/config";
-import Service from "./Service";
-import {expect} from "chai";
+import Service, { EventLoginStart, EventLoginError, EventLoginSuccess } from "./Service";
+import { expect } from "chai";
 
 let authConfig;
 let service: Service;
@@ -9,6 +9,15 @@ before(() => {
     return testConfig.then(json => {
         authConfig = json;
         service = new Service(authConfig.app);
+        service.on(EventLoginStart, () => {
+            console.log("Start login");
+        });
+        service.on(EventLoginSuccess, () => {
+            console.log("Login success");
+        });
+        service.on(EventLoginError, err => {
+            console.log("Login fail", err);
+        });
     });
 });
 
@@ -31,7 +40,7 @@ describe("Auth", () => {
     });
 
     it("fail login, wrong appKey/appSecret", () => {
-        let service2 = new Service({appKey: "xx", appSecret: "xx"});
+        let service2 = new Service({ appKey: "xx", appSecret: "xx" });
         return service2.login(authConfig.user).then(() => {
             throw "Should not login:";
         }, e => {
@@ -88,7 +97,7 @@ describe("Auth", () => {
         });
     });
 
-    
+
 
     it("Logout expired accessToken.");
 
