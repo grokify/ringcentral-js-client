@@ -1,5 +1,9 @@
+import "es6-promise";
 import * as fetch from "isomorphic-fetch";
 
-const authDataUrl = "http://localhost/data/rc-auth.json";
+let authDataUrl = "/data/rc-auth.json";
+if (typeof process != "undefined" && !process["browser"]) {
+    authDataUrl = "http://localhost" + authDataUrl;
+}
 
 export default fetch(authDataUrl).then(res => res.json());

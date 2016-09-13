@@ -14,6 +14,7 @@
     "lint": "tslint -c tslint.json codegen/ts-sample/*.ts src/**/*.ts"
   },
   "dependencies": {
+    "es6-promise": "^3.3.0",
     "form-data": "^1.0.0-rc4",
     "isomorphic-fetch": "^2.2.1",
     "known-fetch-body": "^0.1.1"

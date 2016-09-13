@@ -1,3 +1,4 @@
+import "es6-promise";
 import Service, { SERVER_PRODUCTION, SERVER_SANDBOX, SERVER_VERSION, ServiceOptions} from "./Service";
 import {MemoryTokenStore} from "./Token";
 import Account from "./generated/url-builders/Account";
