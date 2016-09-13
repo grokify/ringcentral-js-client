@@ -130,6 +130,10 @@ describe("Call Log", () => {
             expect(callLogs.records[0]).to.has.keys(["uri", "id", "sessionId", "startTime", "duration", "type", "direction", "action", "result", "to", "from"]);
         });
     });
+
+    it("delete today's call log", () => {
+        return client.account().extension().callLog().delete();
+    });
 });
 
 describe("post", () => {
